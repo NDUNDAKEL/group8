@@ -8,6 +8,8 @@ import {
   Clock,
   Users as UsersIcon,
   BookOpen,
+  Lock,
+  Key,
 } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
 
@@ -20,42 +22,42 @@ const API_BASE = "http://localhost:5000";
 
 const StudentProfile = () => {
   const { user, updateUser } = useAuth(); // Logged-in user
- 
-
-  
-
   const [formData, setFormData] = useState({
     name: user?.name || "",
     email: user?.email || "",
+    current_password: "",
+    new_password: "",
+    confirm_password: "",
   });
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [showPasswordFields, setShowPasswordFields] = useState(false);
+  const [formErrors, setFormErrors] = useState({});
 
   // State for learning preferences
   const [preferences, setPreferences] = useState(null);
   const [loadingPrefs, setLoadingPrefs] = useState(true);
 
-  // NEW state for joined date & quick stats
+  // State for joined date & quick stats
   const [joinedDate, setJoinedDate] = useState(null);
   const [latestPairing, setLatestPairing] = useState(null);
 
-  // Fetch learning preferences on mount
+  // Fetch learning preferences and user data on mount
   useEffect(() => {
     if (!user?.id) return;
     const token = localStorage.getItem("auth_token");
 
-    // Fetch joined date
+    // Fetch user data including joined date
     fetch(`${API_BASE}/users/${user.id}`, {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then((res) => res.json())
       .then((data) => {
-        console.log(data,"sssss")
         if (data.created_at) {
           setJoinedDate(new Date(data.created_at));
         }
       })
-      .catch((err) => console.error(" Failed to fetch user:", err));
+      .catch((err) => console.error("Failed to fetch user:", err));
 
     // Fetch latest pairing for Quick Stats
     fetch(`${API_BASE}/pairs`, {
@@ -66,7 +68,6 @@ const StudentProfile = () => {
         const myPairings = data.filter(
           (p) => p.student1 === user.name || p.student2 === user.name
         );
-
         if (myPairings.length > 0) {
           const latest = [...myPairings].sort((a, b) => b.week - a.week)[0];
           setLatestPairing({
@@ -77,78 +78,154 @@ const StudentProfile = () => {
         }
       })
       .catch((err) => console.error("Failed to fetch pairings:", err));
-  }, [user?.id, user?.name]);
 
-  useEffect(() => {
-    if (!user?.id) return;
-    const token = localStorage.getItem("auth_token");
-
+    // Fetch learning preferences
     fetch(`${API_BASE}/learning-preferences/${user.id}`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
+      headers: { Authorization: `Bearer ${token}` },
     })
       .then((res) => {
         if (!res.ok) {
-          if (res.status === 404) return null; 
+          if (res.status === 404) return null;
           throw new Error("Failed to fetch preferences");
         }
         return res.json();
       })
       .then((data) => {
         setPreferences(data || null);
-        console.log(data, "preferences");
         setLoadingPrefs(false);
       })
       .catch((err) => {
-        console.error(" Failed to load preferences:", err.message);
+        console.error("Failed to load preferences:", err.message);
         setLoadingPrefs(false);
       });
-  }, [user?.id]);
+  }, [user?.id, user?.name]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setIsLoading(true);
+  const validateForm = () => {
+    const errors = {};
 
+    if (!formData.name.trim()) errors.name = "Name is required";
+    if (!formData.email.trim()) {
+      errors.email = "Email is required";
+    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+      errors.email = "Email is invalid";
+    }
+
+    // Password validation only when password fields are shown
+    if (showPasswordFields) {
+      if (!formData.current_password) {
+        errors.current_password = "Current password is required";
+      }
+      if (!formData.new_password) {
+        errors.new_password = "New password is required";
+      } else if (formData.new_password.length < 8) {
+        errors.new_password = "Password must be at least 8 characters";
+      }
+      if (!formData.confirm_password) {
+        errors.confirm_password = "Please confirm your new password";
+      } else if (formData.new_password !== formData.confirm_password) {
+        errors.confirm_password = "Passwords do not match";
+      }
+    }
+
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!validateForm()) return;
+
+    setIsLoading(true);
     const token = localStorage.getItem("auth_token");
 
-    fetch(`${API_BASE}/users/${user.id}`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({
-        name: formData.name,
-        email: formData.email,
-      }),
-    })
-      .then((res) => {
-        if (!res.ok) {
-          return res.json().then((data) => {
-            throw new Error(data.error || "Failed to update profile");
-          });
-        }
-        return res.json();
-      })
-      .then((data) => {
-        console.log("✅ Profile updated:", data.user);
-        updateUser(data.user);
-        alert("Profile updated successfully!");
-        setIsEditing(false);
-      })
-      .catch((err) => {
-        console.error(" Failed to update profile:", err.message);
-        alert(err.message);
-      })
-      .finally(() => {
-        setIsLoading(false);
+    const dataToSend = {
+      name: formData.name,
+      email: formData.email,
+    };
+
+    // Only include password fields if they're being changed
+    if (showPasswordFields) {
+      dataToSend.current_password = formData.current_password;
+      dataToSend.new_password = formData.new_password;
+      dataToSend.confirm_password = formData.confirm_password;
+    }
+
+    try {
+      const response = await fetch(`${API_BASE}/users/${user.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(dataToSend),
       });
+
+      // First check if response is OK
+      if (!response.ok) {
+        // Try to parse error message
+        let errorMsg = "Failed to update profile";
+        try {
+          const errorData = await response.json();
+          errorMsg = errorData.error || errorMsg;
+        } catch (e) {
+          // If response isn't JSON, use status text
+          errorMsg = response.statusText || errorMsg;
+        }
+        throw new Error(errorMsg);
+      }
+
+      // Parse successful response
+      const data = await response.json();
+      
+      console.log("✅ Profile updated:", data.user);
+      updateUser(data.user);
+      alert("Profile updated successfully!");
+      setIsEditing(false);
+      setShowPasswordFields(false);
+      // Clear password fields
+      setFormData(prev => ({
+        ...prev,
+        current_password: "",
+        new_password: "",
+        confirm_password: ""
+      }));
+    } catch (err) {
+      console.error("Failed to update profile:", err);
+      alert(err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const togglePasswordFields = () => {
+    setShowPasswordFields(!showPasswordFields);
+    // Clear password fields when toggling off
+    if (showPasswordFields) {
+      setFormData((prev) => ({
+        ...prev,
+        current_password: "",
+        new_password: "",
+        confirm_password: "",
+      }));
+    }
+  };
+
+  const resetForm = () => {
+    setFormData({
+      name: user?.name || "",
+      email: user?.email || "",
+      current_password: "",
+      new_password: "",
+      confirm_password: "",
+    });
+    setFormErrors({});
+    setIsEditing(false);
+    setShowPasswordFields(false);
   };
 
   return (
@@ -188,7 +265,7 @@ const StudentProfile = () => {
               </div>
             </Card>
 
-            {/*  Quick Stats fixed */}
+            {/* Quick Stats */}
             <Card className="mt-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">
                 Quick Stats
@@ -234,6 +311,7 @@ const StudentProfile = () => {
                   onChange={handleChange}
                   disabled={!isEditing}
                   placeholder="Enter your full name"
+                  error={formErrors.name}
                 />
 
                 <Input
@@ -244,10 +322,58 @@ const StudentProfile = () => {
                   onChange={handleChange}
                   disabled={!isEditing}
                   placeholder="Enter your email"
+                  error={formErrors.email}
                 />
 
                 {isEditing && (
-                  <div className="flex gap-4">
+                  <div className="pt-4">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={togglePasswordFields}
+                    >
+                      <Key className="h-4 w-4 mr-2" />
+                      {showPasswordFields
+                        ? "Cancel Password Change"
+                        : "Change Password"}
+                    </Button>
+
+                    {showPasswordFields && (
+                      <div className="mt-4 space-y-4">
+                        <Input
+                          label="Current Password"
+                          type="password"
+                          name="current_password"
+                          value={formData.current_password}
+                          onChange={handleChange}
+                          placeholder="Enter your current password"
+                          error={formErrors.current_password}
+                        />
+                        <Input
+                          label="New Password"
+                          type="password"
+                          name="new_password"
+                          value={formData.new_password}
+                          onChange={handleChange}
+                          placeholder="Enter your new password"
+                          error={formErrors.new_password}
+                        />
+                        <Input
+                          label="Confirm New Password"
+                          type="password"
+                          name="confirm_password"
+                          value={formData.confirm_password}
+                          onChange={handleChange}
+                          placeholder="Confirm your new password"
+                          error={formErrors.confirm_password}
+                        />
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {isEditing && (
+                  <div className="flex gap-4 pt-2">
                     <Button type="submit" isLoading={isLoading}>
                       <Save className="h-4 w-4 mr-2" />
                       Save Changes
@@ -255,13 +381,7 @@ const StudentProfile = () => {
                     <Button
                       type="button"
                       variant="outline"
-                      onClick={() => {
-                        setIsEditing(false);
-                        setFormData({
-                          name: user?.name || "",
-                          email: user?.email || "",
-                        });
-                      }}
+                      onClick={resetForm}
                     >
                       Cancel
                     </Button>
@@ -270,7 +390,7 @@ const StudentProfile = () => {
               </form>
             </Card>
 
-            {/*  Learning Preferences  */}
+            {/* Learning Preferences */}
             <Card className="mt-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">
                 Learning Preferences

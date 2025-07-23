@@ -2,7 +2,7 @@ from flask_sqlalchemy import SQLAlchemy
 
 from datetime import datetime
 from sqlalchemy_serializer import SerializerMixin
-from extensions import db
+from extensions import db,bcrypt
 
 class User(db.Model,SerializerMixin):
     __tablename__ = 'users'
@@ -13,13 +13,18 @@ class User(db.Model,SerializerMixin):
     password = db.Column(db.String(255), nullable=False)  
     role = db.Column(db.String(10), default='student')  
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-
+    clerk_id = db.Column(db.String(128), unique=True, nullable=True)
+    auth_method = db.Column(db.String(20), default='email')  # 'email', 'google', 'clerk'
     # One-to-one relationship with learning preference
     learning_pref = db.relationship('LearningPreference', backref='user', uselist=False)
     quizzes = db.relationship('QuizResult', backref='student', lazy=True)
     feedbacks = db.relationship('Feedback', backref='student', lazy=True)
 
+    def set_password(self, raw_password):
+        self.password = bcrypt.generate_password_hash(raw_password).decode('utf-8')
 
+    def check_password(self, raw_password):
+        return bcrypt.check_password_hash(self.password, raw_password)
 
 
 

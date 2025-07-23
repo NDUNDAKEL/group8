@@ -24,26 +24,34 @@ const ManageStudents = () => {
     fetchStudents();
   }, []);
 
-  const fetchStudents = async () => {
-    try {
-      const res = await fetch(`${API_BASE}/users`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+ const fetchStudents = async () => {
+  try {
+    const res = await fetch(`${API_BASE}/users`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
 
-      if (!res.ok) throw new Error("Failed to fetch students");
-      const data = await res.json();
-      setStudents(
-        data.map((s) => ({
-          ...s,
-          registeredAt: s.created_at || new Date().toISOString(),
-        }))
-      );
-    } catch (err) {
-      console.error(" Error fetching students:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
+    if (!res.ok) throw new Error("Failed to fetch students");
+
+    const data = await res.json();
+
+    // Filter out users with role 'admin' or 'tm'
+    const filteredStudents = data.filter(
+      (s) => s.role !== "admin" && s.role !== "tm"
+    );
+
+    setStudents(
+      filteredStudents.map((s) => ({
+        ...s,
+        registeredAt: s.created_at || new Date().toISOString(),
+      }))
+    );
+  } catch (err) {
+    console.error("Error fetching students:", err);
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   const validateForm = () => {
     const errors = {};
@@ -93,7 +101,7 @@ const ManageStudents = () => {
         body: JSON.stringify({
           name: student.name,
           email: student.email,
-          password: "default123", //  temporary password for new student
+         
         }),
       });
 

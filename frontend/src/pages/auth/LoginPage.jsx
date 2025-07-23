@@ -7,6 +7,7 @@ import Input from "../../components/ui/Input";
 import Card from "../../components/ui/Card";
 import GoogleLoginButton from "../../components/GoogleLoginButton";
 import { useLocation } from "react-router-dom";
+import EmailSignInButton from "../../components/EmailSignInButton";
 // import axios from 'axios';
 
 const LoginPage = () => {
@@ -107,7 +108,7 @@ const LoginPage = () => {
             </Button>
           </form>
 
-          <div className="mt-6">
+        <div className="mt-6">
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
                 <div className="w-full border-t border-gray-300" />
@@ -120,7 +121,7 @@ const LoginPage = () => {
             </div>
 
             <div className="mt-6">
-              <GoogleLoginButton />
+              <EmailSignInButton/>
             </div>
           </div>
 
