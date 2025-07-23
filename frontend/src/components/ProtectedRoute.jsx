@@ -1,22 +1,30 @@
 import React from "react";
 import { Navigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
+import { useUser } from "@clerk/clerk-react";
 
 const ProtectedRoute = ({ children, allowedRoles }) => {
   const { isAuthenticated, user } = useAuth();
+  const { isSignedIn } = useUser(); // ✅ correct way to check Clerk login
 
   const roleRedirects = {
     tm: "/admin/dashboard",
     admin: "/admin/dashboard",
     student: "/student/dashboard",
+    clerk: "/landing", // just in case
   };
 
-  // Not logged in? Force login
+  // ✅ Clerk user logged in but not in your backend
+  if (isSignedIn && !isAuthenticated) {
+    return <Navigate to="/landing" replace />;
+  }
+
+  // Not logged in (neither via Clerk nor backend)?
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
 
-  // Only do role checking if allowedRoles is explicitly provided
+  // Check roles (optional)
   if (allowedRoles?.length > 0) {
     if (!allowedRoles.includes(user?.role)) {
       const redirectPath = roleRedirects[user?.role] || "/";
@@ -24,7 +32,7 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
     }
   }
 
-  // Otherwise, just allow access (e.g., for `/home`)
+  // ✅ Access granted
   return <>{children}</>;
 };
 

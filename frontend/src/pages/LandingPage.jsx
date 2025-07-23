@@ -3,6 +3,9 @@ import { Link } from 'react-router-dom';
 import { Users, Calendar, TrendingUp, Shield, Zap, Heart, ArrowRight, Star, CheckCircle } from 'lucide-react';
 import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
+import UserAuthSection from '../components/UserAuthSection';
+import { SignedIn } from '@clerk/clerk-react';
+import { SignOutButton } from '@clerk/clerk-react';
 
 const LandingPage = () => {
   const features = [
@@ -69,7 +72,7 @@ const LandingPage = () => {
   return (
     <div className="min-h-screen bg-white">
       {/* Navigation */}
-      <nav className="bg-white border-b border-gray-200 sticky top-0 z-50">
+     <nav className="bg-white border-b border-gray-200 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center">
@@ -80,7 +83,7 @@ const LandingPage = () => {
                 <span className="text-xl font-bold text-gray-900">MoringaPair</span>
               </div>
             </div>
-            <div className="flex items-center space-x-4">
+            {/* <div className="flex items-center space-x-4">
               <Link
                 to="/login"
                 className="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium transition-colors"
@@ -90,7 +93,14 @@ const LandingPage = () => {
               <Link to="/register">
                 <Button size="sm">Get Started</Button>
               </Link>
-            </div>
+            </div> */}
+              <div className="flex justify-between h-16">
+          {/* ... other nav items ... */}
+          <UserAuthSection />
+          <SignedIn>
+
+</SignedIn>
+        </div>
           </div>
         </div>
       </nav>

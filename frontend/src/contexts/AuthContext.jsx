@@ -73,7 +73,42 @@ export const AuthProvider = ({ children }) => {
     // Dispatch reducer action to update context
     dispatch({ type: 'UPDATE_USER', payload: updatedUser });
   };
+// Add this to your AuthContext
+ const loginWithClerk = async (clerkUser) => {
+  dispatch({ type: 'LOGIN_START' });
+  
+  try {
+    const response = await fetch('http://localhost:5000/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        is_clerk: true,
+        clerk_id: clerkUser.id,
+        email: clerkUser.primaryEmailAddress?.emailAddress,
+        name: clerkUser.fullName || `${clerkUser.firstName} ${clerkUser.lastName}`
+      }),
+    });
 
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    if (!data.token || !data.user) {
+      throw new Error('Invalid response format');
+    }
+
+    localStorage.setItem('moringapair_user', JSON.stringify(data.user));
+    localStorage.setItem('auth_token', data.token);
+
+    dispatch({ type: 'LOGIN_SUCCESS', payload: data.user });
+    return data.user;
+  } catch (error) {
+    console.error('Login error:', error);
+    dispatch({ type: 'LOGIN_FAILURE', payload: error.message });
+    throw error;
+  }
+};
 
   const login = async (email, password) => {
     dispatch({ type: 'LOGIN_START' });
@@ -104,7 +139,28 @@ export const AuthProvider = ({ children }) => {
       dispatch({ type: 'LOGIN_FAILURE', payload: error.message });
     }
   };
-  
+  const logout = async () => {
+  try {
+    // Clear local storage
+    localStorage.removeItem('moringapair_user');
+    localStorage.removeItem('auth_token');
+    
+    // If using Clerk, sign out from Clerk session
+    if (window.Clerk && window.Clerk.signOut) {
+      await window.Clerk.signOut();
+    }
+    
+    // Dispatch logout action
+    dispatch({ type: 'LOGOUT' });
+    
+    
+    return true;
+  } catch (error) {
+    console.error('Logout error:', error);
+    return false;
+  }
+};
+
 
   const loginWithGoogle = async (googleUser) => {
     dispatch({ type: 'LOGIN_START' });
@@ -128,10 +184,6 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const logout = () => {
-    localStorage.removeItem('moringapair_user');
-    dispatch({ type: 'LOGOUT' });
-  };
 
   const clearError = () => {
     dispatch({ type: 'CLEAR_ERROR' });
@@ -141,11 +193,12 @@ export const AuthProvider = ({ children }) => {
     <AuthContext.Provider
       value={{
         ...state,
+        logout,
         login,
         loginWithGoogle,
-        logout,
         clearError,
         updateUser,
+        loginWithClerk
       }}
     >
       {children}

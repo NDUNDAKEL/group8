@@ -6,7 +6,7 @@ import Input from '../../components/ui/Input';
 import Card from '../../components/ui/Card';
 import GoogleLoginButton from '../../components/GoogleLoginButton';
 import axios from "axios";
-
+import EmailSignInButton from '../../components/EmailSignInButton';
 const RegisterPage = () => {
   const [formData, setFormData] = useState({
     name: '',
@@ -162,11 +162,15 @@ const RegisterPage = () => {
               </div>
               <div className="relative flex justify-center text-sm">
                 <span className="px-2 bg-white text-gray-500">Or continue with</span>
+                  <div className="mt-6">
+              <EmailSignInButton/>
+            </div>
               </div>
+
             </div>
             
             <div className="mt-6">
-              <GoogleLoginButton />
+               <EmailSignInButton/>
             </div>
           </div>
           
