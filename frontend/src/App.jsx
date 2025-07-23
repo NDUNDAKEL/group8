@@ -3,7 +3,6 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { AppProvider } from './contexts/AppContext';
 import ProtectedRoute from './components/ProtectedRoute';
-import ClerkAuthHandler from './components/ClerkAuthHandler';
 
 // Landing Page
 import LandingPage from './pages/LandingPage';
@@ -193,7 +192,6 @@ function App() {
       <AppProvider>
         <Router>
           <div className="min-h-screen bg-gray-50">
-            <ClerkAuthHandler />
             <AppRoutes />
           </div>
         </Router>

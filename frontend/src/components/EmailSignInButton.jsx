@@ -11,8 +11,8 @@ const EmailSignInButton = () => {
     <SignedOut>
       <SignInButton 
         mode="modal"
-        afterSignInUrl="/student/dashboard"
-        afterSignUpUrl="/student/dashboard"
+        afterSignInUrl="/landing"
+        afterSignUpUrl="/landing"
       >
         <Button
           variant="outline"
